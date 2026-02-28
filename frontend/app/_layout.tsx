@@ -9,24 +9,19 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
   const { colors } = useTheme();
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
-  const [checkedOnboarding, setCheckedOnboarding] = useState(false);
+  const hasRedirected = React.useRef(false);
 
   useEffect(() => {
     AsyncStorage.getItem('onboarding_completed').then((val) => {
-      if (val !== 'true') {
-        setCheckedOnboarding(true);
+      if (val !== 'true' && !hasRedirected.current) {
+        hasRedirected.current = true;
+        setIsReady(true);
+        setTimeout(() => router.replace('/onboarding'), 0);
+      } else {
+        setIsReady(true);
       }
-      setIsReady(true);
     });
   }, []);
-
-  useEffect(() => {
-    if (!isReady) return;
-    if (checkedOnboarding) {
-      setCheckedOnboarding(false);
-      router.replace('/onboarding');
-    }
-  }, [isReady, checkedOnboarding]);
 
   if (!isReady) {
     return (
