@@ -160,6 +160,66 @@ BUILT_IN_TOOLS = [
         "android_action": "internal.storage.write",
         "permissions": [],
         "builtin": True
+    },
+    {
+        "name": "create_file",
+        "description": "Creates a new file with the given name and content in local storage.",
+        "parameters": {
+            "filename": {"type": "string", "required": True, "description": "Name of the file to create (e.g. 'notes.txt', 'todo.md')."},
+            "content": {"type": "string", "required": True, "description": "Text content to write to the file."},
+            "directory": {"type": "string", "required": False, "description": "Optional directory path (e.g. 'documents', 'projects/myapp'). Defaults to root."}
+        },
+        "android_action": "internal.file.create",
+        "permissions": [],
+        "builtin": True
+    },
+    {
+        "name": "read_file",
+        "description": "Reads and returns the content of a local file.",
+        "parameters": {
+            "filename": {"type": "string", "required": True, "description": "Name of the file to read."},
+            "directory": {"type": "string", "required": False, "description": "Optional directory path."}
+        },
+        "android_action": "internal.file.read",
+        "permissions": [],
+        "builtin": True
+    },
+    {
+        "name": "edit_file",
+        "description": "Edits an existing local file. Can replace content entirely, append to it, or replace specific text.",
+        "parameters": {
+            "filename": {"type": "string", "required": True, "description": "Name of the file to edit."},
+            "content": {"type": "string", "required": True, "description": "New content or content to append."},
+            "mode": {"type": "string", "required": False, "description": "'overwrite' (default), 'append', or 'replace'. For 'replace', use find_text and replace_text params instead of content."},
+            "find_text": {"type": "string", "required": False, "description": "Text to find (used with mode='replace')."},
+            "replace_text": {"type": "string", "required": False, "description": "Text to replace with (used with mode='replace')."},
+            "directory": {"type": "string", "required": False, "description": "Optional directory path."}
+        },
+        "android_action": "internal.file.edit",
+        "permissions": [],
+        "builtin": True
+    },
+    {
+        "name": "delete_file",
+        "description": "Deletes a local file from storage.",
+        "parameters": {
+            "filename": {"type": "string", "required": True, "description": "Name of the file to delete."},
+            "directory": {"type": "string", "required": False, "description": "Optional directory path."}
+        },
+        "android_action": "internal.file.delete",
+        "permissions": [],
+        "builtin": True
+    },
+    {
+        "name": "list_files",
+        "description": "Lists all files in local storage, optionally filtered by directory.",
+        "parameters": {
+            "directory": {"type": "string", "required": False, "description": "Optional directory to list. Defaults to root."},
+            "pattern": {"type": "string", "required": False, "description": "Optional filename pattern filter (e.g. '*.txt', '*.md')."}
+        },
+        "android_action": "internal.file.list",
+        "permissions": [],
+        "builtin": True
     }
 ]
 
