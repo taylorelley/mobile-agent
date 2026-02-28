@@ -454,7 +454,6 @@ async def send_chat(msg: ChatMessage):
         # Explicit ACTION signal detected
         routing_decision = "action_routed_signal"
         action_description = action_match.group(1).strip()
-        preamble = chat_response[:action_match.start()].strip()
 
         # Step 3: Action Model inference
         action_memory = await get_relevant_facts(msg.message, limit=2, categories=["schedule", "preference"])
