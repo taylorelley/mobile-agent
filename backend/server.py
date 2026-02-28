@@ -679,7 +679,10 @@ async def send_chat(msg: ChatMessage):
                         if "error" not in parsed:
                             tool_name = parsed.get("tool", "")
                             params = parsed.get("params", {})
-                            tool_result = simulate_tool_execution(tool_name, params, tools)
+                            if tool_name in FILE_TOOLS:
+                                tool_result = await execute_file_operation(tool_name, params)
+                            else:
+                                tool_result = simulate_tool_execution(tool_name, params, tools)
                             tool_calls_str = json.dumps({"call": parsed, "result": tool_result})
                             confirm_system = "You are LobsterLite. Provide a brief confirmation of the action."
                             confirm_chat = LlmChat(api_key=api_key, session_id=f"confirm-h-{uuid.uuid4().hex[:8]}", system_message=confirm_system)
