@@ -995,7 +995,7 @@ async def update_settings(update: SettingsUpdate):
 
 @api_router.delete("/data")
 async def delete_all_data():
-    collections = ["conversations", "facts", "soul_config", "settings", "custom_tools", "action_keywords", "models"]
+    collections = ["conversations", "facts", "soul_config", "settings", "custom_tools", "action_keywords", "models", "files"]
     for col in collections:
         await db[col].delete_many({})
     return {"deleted": True, "message": "All data wiped securely."}
