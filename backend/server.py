@@ -297,6 +297,17 @@ class KeywordsUpdate(BaseModel):
 class ModelDownloadRequest(BaseModel):
     model_id: str
 
+class FileCreate(BaseModel):
+    filename: str
+    content: str
+    directory: Optional[str] = ""
+
+class FileUpdate(BaseModel):
+    content: Optional[str] = None
+    mode: Optional[str] = "overwrite"
+    find_text: Optional[str] = None
+    replace_text: Optional[str] = None
+
 class ConversationResponse(BaseModel):
     id: str
     session_id: str
