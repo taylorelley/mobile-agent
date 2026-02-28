@@ -308,6 +308,13 @@ class FileUpdate(BaseModel):
     find_text: Optional[str] = None
     replace_text: Optional[str] = None
 
+class FileRename(BaseModel):
+    new_filename: str
+
+class FileSearch(BaseModel):
+    query: str
+    directory: Optional[str] = None
+
 class ConversationResponse(BaseModel):
     id: str
     session_id: str
