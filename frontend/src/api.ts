@@ -76,6 +76,17 @@ export const updateFile = (fileId: string, content: string, mode?: string, find_
   });
 export const deleteFile = (fileId: string) =>
   request(`/files/${encodeURIComponent(fileId)}`, { method: 'DELETE' });
+export const renameFile = (fileId: string, newFilename: string) =>
+  request(`/files/${encodeURIComponent(fileId)}/rename`, {
+    method: 'PATCH',
+    body: JSON.stringify({ new_filename: newFilename }),
+  });
+export const searchFiles = (query: string, directory?: string) => {
+  const params = new URLSearchParams({ q: query });
+  if (directory) params.set('directory', directory);
+  return request(`/files/search/query?${params.toString()}`);
+};
+export const getDirectoryTree = () => request('/files/directories/tree');
 
 // Settings
 export const getSettings = () => request('/settings');
