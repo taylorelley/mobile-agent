@@ -936,6 +936,76 @@ async def delete_file_endpoint(file_id: str):
         raise HTTPException(status_code=404, detail="File not found")
     return {"deleted": True}
 
+@api_router.patch("/files/{file_id}/rename")
+async def rename_file_endpoint(file_id: str, rename: FileRename):
+    file_doc = await db.files.find_one({"id": file_id}, {"_id": 0})
+    if not file_doc:
+        file_doc = await db.files.find_one({"path": file_id}, {"_id": 0})
+    if not file_doc:
+        raise HTTPException(status_code=404, detail="File not found")
+    new_filename = rename.new_filename.strip()
+    if not new_filename:
+        raise HTTPException(status_code=400, detail="Filename cannot be empty")
+    directory = file_doc.get("directory", "")
+    new_path = f"{directory}/{new_filename}".strip("/") if directory else new_filename
+    existing = await db.files.find_one({"path": new_path}, {"_id": 0})
+    if existing and existing.get("id") != file_doc.get("id"):
+        raise HTTPException(status_code=409, detail=f"File '{new_path}' already exists")
+    now_str = datetime.now(timezone.utc).isoformat()
+    await db.files.update_one(
+        {"id": file_doc["id"]},
+        {"$set": {"filename": new_filename, "path": new_path, "updated_at": now_str}}
+    )
+    file_doc["filename"] = new_filename
+    file_doc["path"] = new_path
+    file_doc["updated_at"] = now_str
+    return file_doc
+
+@api_router.get("/files/search/query")
+async def search_files_endpoint(q: str, directory: Optional[str] = None):
+    query: Dict[str, Any] = {
+        "$or": [
+            {"filename": {"$regex": re.escape(q), "$options": "i"}},
+            {"content": {"$regex": re.escape(q), "$options": "i"}},
+            {"path": {"$regex": re.escape(q), "$options": "i"}},
+        ]
+    }
+    if directory:
+        query["directory"] = {"$regex": f"^{re.escape(directory)}", "$options": "i"}
+    files = await db.files.find(query, {"_id": 0, "content": 0}).sort("updated_at", -1).to_list(100)
+    return files
+
+@api_router.get("/files/directories/tree")
+async def get_directory_tree():
+    files = await db.files.find({}, {"_id": 0, "content": 0}).to_list(1000)
+    dirs: Dict[str, Any] = {}
+    for f in files:
+        d = f.get("directory", "") or "/"
+        if d not in dirs:
+            dirs[d] = {"path": d, "files": [], "file_count": 0, "total_size": 0}
+        dirs[d]["files"].append({
+            "id": f["id"],
+            "filename": f["filename"],
+            "path": f["path"],
+            "size_bytes": f.get("size_bytes", 0),
+            "updated_at": f.get("updated_at", ""),
+        })
+        dirs[d]["file_count"] += 1
+        dirs[d]["total_size"] += f.get("size_bytes", 0)
+    # Build tree structure
+    tree = []
+    for path, data in sorted(dirs.items()):
+        parts = [p for p in path.split("/") if p] if path != "/" else []
+        tree.append({
+            "path": path,
+            "name": parts[-1] if parts else "Root",
+            "depth": len(parts),
+            "file_count": data["file_count"],
+            "total_size": data["total_size"],
+            "files": sorted(data["files"], key=lambda x: x["filename"]),
+        })
+    return tree
+
 # ─── Keywords Endpoints ───
 
 @api_router.get("/keywords")
