@@ -38,9 +38,17 @@ LobsterLite is a dual-model AI agent mobile application that reimplements OpenCl
 - "Forget" command to delete memories by topic
 
 ### 5. Tool Registry
-10 built-in tools: create_alarm, create_calendar_event, send_sms, open_url, set_timer, create_reminder, toggle_wifi, toggle_flashlight, search_web, take_note
+15 built-in tools: create_alarm, create_calendar_event, send_sms, open_url, set_timer, create_reminder, toggle_wifi, toggle_flashlight, search_web, take_note, **create_file, read_file, edit_file, delete_file, list_files**
 - Custom tool support via JSON schema
 - Maximum 30 total tools
+
+### 6. File Manager
+- Agent can create, read, edit, delete, and list local files via natural language chat
+- File operations are real (stored in MongoDB) - not simulated
+- File Manager UI (Settings > File Manager) for manual file management
+- Full in-app editor with monospace font, metadata display, save functionality
+- Create file modal with filename, directory, and content inputs
+- File type icons based on extension (.txt, .md, .json, .js, .py, etc.)
 
 ### 6. Model Manager
 - Download models from HuggingFace on demand
@@ -69,6 +77,8 @@ LobsterLite is a dual-model AI agent mobile application that reimplements OpenCl
 | /api/conversations | GET/DELETE | Conversation history |
 | /api/tools | GET | Tool registry |
 | /api/tools/custom | POST/DELETE | Custom tool management |
+| /api/files | GET/POST | List/create files |
+| /api/files/:id | GET/PUT/DELETE | Read/update/delete file |
 | /api/keywords | GET/PUT | Action keywords |
 | /api/models | GET | Model listing |
 | /api/models/download | POST | Start model download |
