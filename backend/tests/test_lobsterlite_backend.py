@@ -69,21 +69,21 @@ class TestSoul:
 class TestTools:
     """Tools endpoint tests"""
     
-    def test_get_tools_returns_10_builtin_tools(self):
-        """Test /api/tools GET returns 10 built-in tools"""
+    def test_get_tools_returns_15_builtin_tools(self):
+        """Test /api/tools GET returns 15 built-in tools (10 original + 5 file tools)"""
         response = requests.get(f"{BASE_URL}/api/tools")
         assert response.status_code == 200
         tools = response.json()
         assert isinstance(tools, list)
         builtin_tools = [t for t in tools if t.get("builtin") == True]
-        assert len(builtin_tools) == 10
-        print(f"✓ GET /api/tools passed, {len(builtin_tools)} built-in tools found")
+        assert len(builtin_tools) == 15, f"Expected 15 built-in tools, got {len(builtin_tools)}"
+        print(f"✓ GET /api/tools passed, {len(builtin_tools)} built-in tools found (10 original + 5 file tools)")
         
-        # Verify expected tools exist
+        # Verify expected tools exist (original + file tools)
         tool_names = [t["name"] for t in tools]
-        expected = ["create_alarm", "send_sms", "open_url", "set_timer", "create_reminder"]
+        expected = ["create_alarm", "send_sms", "open_url", "set_timer", "create_reminder", "create_file", "read_file", "edit_file", "delete_file", "list_files"]
         for name in expected:
-            assert name in tool_names
+            assert name in tool_names, f"Expected tool '{name}' not found"
         print(f"✓ Expected tool names verified: {expected}")
 
 
