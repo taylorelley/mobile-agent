@@ -50,7 +50,10 @@ DEFAULT_ACTION_KEYWORDS = [
     "set alarm", "set timer", "send message", "send sms", "send text",
     "call", "open", "turn on", "turn off", "remind me", "create event",
     "schedule", "search for", "take note", "write down", "flashlight",
-    "wifi", "bluetooth", "navigate to", "play music"
+    "wifi", "bluetooth", "navigate to", "play music",
+    "create file", "read file", "open file", "edit file", "delete file",
+    "write file", "save file", "list files", "show files", "update file",
+    "make file", "new file", "modify file", "change file", "rename file"
 ]
 
 BUILT_IN_TOOLS = [
