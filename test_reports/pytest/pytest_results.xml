@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="0" skipped="0" tests="1" time="0.196" timestamp="2026-02-28T19:50:45.191367+00:00" hostname="agent-env-9f88620a-2e8b-40c6-848f-5752c5d50d4d"><testcase classname="" name="tests.test_lobsterlite_backend" time="0.000"><error message="collection failure">tests/test_lobsterlite_backend.py:9: in &lt;module&gt;
+    BASE_URL = os.environ['EXPO_PUBLIC_BACKEND_URL'].rstrip('/')
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen os&gt;:679: in __getitem__
+    ???
+E   KeyError: 'EXPO_PUBLIC_BACKEND_URL'</error></testcase></testsuite></testsuites>
