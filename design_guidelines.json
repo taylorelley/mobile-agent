@@ -1,0 +1,173 @@
+{
+  "identity": {
+    "name": "LobsterLite",
+    "aesthetic": "Abyssal Tech / Bioluminescent Utility",
+    "core_metaphor": "A deep-sea research submarine cockpit. Dark, pressure-resistant, illuminated by vital data.",
+    "principles": [
+      "Privacy is Visible: Always show if an action is Local (Green) or Network (Amber).",
+      "Function over Form: High information density, high contrast, low noise.",
+      "Tactile Feedback: Buttons should feel 'clicky' (visual press states), interactions should be snappy.",
+      "The 'Ghost' in the Shell: The AI is a tool, not a person. Use machine-like language in UI ('Processing', 'Routing') rather than fake empathy."
+    ]
+  },
+  "design_tokens": {
+    "colors": {
+      "light": {
+        "background": "#F0F2F5",
+        "surface": "#FFFFFF",
+        "surface_highlight": "#E1E4E8",
+        "text_primary": "#0F172A",
+        "text_secondary": "#64748B",
+        "primary": "#FF4500",
+        "primary_foreground": "#FFFFFF",
+        "secondary": "#06B6D4",
+        "accent": "#F59E0B",
+        "destructive": "#EF4444",
+        "border": "#E2E8F0",
+        "success": "#10B981"
+      },
+      "dark": {
+        "background": "#02040A",
+        "surface": "#0D1117",
+        "surface_highlight": "#161B22",
+        "text_primary": "#E2E8F0",
+        "text_secondary": "#94A3B8",
+        "primary": "#FF5F1F",
+        "primary_foreground": "#FFFFFF",
+        "secondary": "#22D3EE",
+        "accent": "#FBBF24",
+        "destructive": "#F87171",
+        "border": "#1E293B",
+        "success": "#34D399"
+      }
+    },
+    "typography": {
+      "font_family_heading": "Plus Jakarta Sans, System, sans-serif",
+      "font_family_body": "Plus Jakarta Sans, System, sans-serif",
+      "font_family_mono": "JetBrains Mono, Menlo, monospace",
+      "sizes": {
+        "xs": 12,
+        "sm": 14,
+        "base": 16,
+        "lg": 18,
+        "xl": 20,
+        "2xl": 24,
+        "3xl": 30,
+        "4xl": 36
+      },
+      "weights": {
+        "light": "300",
+        "regular": "400",
+        "medium": "500",
+        "semibold": "600",
+        "bold": "700"
+      }
+    },
+    "spacing": {
+      "xs": 4,
+      "sm": 8,
+      "md": 12,
+      "lg": 16,
+      "xl": 24,
+      "2xl": 32,
+      "3xl": 48
+    },
+    "radius": {
+      "sm": 4,
+      "md": 8,
+      "lg": 12,
+      "xl": 16,
+      "full": 9999
+    },
+    "shadows": {
+      "none": "none",
+      "sm": "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+      "md": "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+      "lg": "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+      "glow_primary": "0 0 15px rgba(255, 69, 0, 0.3)",
+      "glow_secondary": "0 0 15px rgba(6, 182, 212, 0.3)"
+    }
+  },
+  "components": {
+    "ChatScreen": {
+      "container": "flex-1 bg-background",
+      "message_list": "flex-1 px-4",
+      "input_area": "p-4 border-t border-border bg-surface/95 backdrop-blur-md",
+      "bubble_user": "bg-primary rounded-2xl rounded-tr-sm px-4 py-3 self-end max-w-[85%] shadow-sm",
+      "bubble_ai": "bg-surface rounded-2xl rounded-tl-sm px-4 py-3 self-start max-w-[85%] border border-border shadow-sm",
+      "bubble_text_user": "text-primary-foreground font-medium",
+      "bubble_text_ai": "text-text_primary",
+      "action_card": "my-2 p-3 bg-surface_highlight border-l-4 border-secondary rounded-r-md rounded-l-none",
+      "streaming_cursor": "inline-block w-2 h-5 bg-primary animate-pulse ml-1"
+    },
+    "SettingsScreen": {
+      "container": "flex-1 bg-background p-4",
+      "section_header": "text-sm font-bold text-secondary uppercase tracking-wider mb-2 mt-6",
+      "card": "bg-surface border border-border rounded-xl p-4 mb-3",
+      "row": "flex-row justify-between items-center py-3 border-b border-border/50 last:border-0"
+    },
+    "Onboarding": {
+      "container": "flex-1 bg-background justify-center px-6",
+      "title": "text-4xl font-bold text-primary mb-2 tracking-tight",
+      "subtitle": "text-lg text-text_secondary mb-8",
+      "step_indicator_container": "flex-row gap-2 mb-8",
+      "step_dot": "h-1 flex-1 rounded-full bg-border",
+      "step_dot_active": "bg-primary"
+    }
+  },
+  "icons": {
+    "library": "@expo/vector-icons",
+    "family": "MaterialCommunityIcons",
+    "mappings": {
+      "chat": "message-text-outline",
+      "settings": "cog-outline",
+      "memory": "brain",
+      "tools": "toolbox-outline",
+      "download": "download-outline",
+      "play": "play-circle-outline",
+      "stop": "stop-circle-outline",
+      "send": "arrow-up-circle",
+      "local_model": "shield-check-outline",
+      "cloud_model": "cloud-outline",
+      "delete": "trash-can-outline",
+      "edit": "pencil-outline",
+      "check": "check-circle",
+      "warning": "alert-circle-outline",
+      "info": "information-outline",
+      "user": "account-circle-outline",
+      "bot": "robot-excited-outline"
+    }
+  },
+  "image_assets": {
+    "hero_illustrations": "Use abstract 3D geometric shapes or wireframes. Do not use generic corporate art.",
+    "model_logos": {
+      "mistral": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Mistral_AI_logo.svg/1200px-Mistral_AI_logo.svg.png",
+      "llama": "https://upload.wikimedia.org/wikipedia/commons/1/1c/Llama_Logo.svg",
+      "gemma": "https://upload.wikimedia.org/wikipedia/commons/8/85/Gemma_logo.svg"
+    }
+  },
+  "animations": {
+    "transitions": "LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)",
+    "active_opacity": 0.7,
+    "duration_fast": 200,
+    "duration_normal": 350
+  },
+  "universal_guidelines": [
+    "Use 'SafeAreaView' from 'react-native-safe-area-context' for all screens.",
+    "Use 'KeyboardAvoidingView' with 'behavior' prop set based on platform (padding for iOS, height for Android) for chat inputs.",
+    "Touch targets must be at least 48x48dp. Add 'hitSlop' to small buttons.",
+    "Use 'StatusBar' to match the theme (light-content for dark mode).",
+    "Text inputs should have 'textAlignVertical=\"top\"' for multiline areas.",
+    "Always wrap scrollable content in 'ScrollView' or 'FlatList' with 'contentContainerStyle={{ paddingBottom: 100 }}' to avoid bottom nav overlap.",
+    "For shadows in Android, use the 'elevation' property alongside standard shadow props."
+  ],
+  "instructions_to_main_agent": [
+    "Initialize the app using 'npx create-expo-app@latest'.",
+    "Install 'nativewind' for Tailwind styling in React Native.",
+    "Install 'zustand' for state management (Memory, Models, Settings).",
+    "Install 'react-native-mmkv' for fast, synchronous storage (crucial for privacy/offline data).",
+    "Use 'react-native-reanimated' for high-performance animations.",
+    "Implement the 'HuggingFace' model downloader using 'expo-file-system'.",
+    "Mock the actual LLM inference if local models are too heavy for the dev environment, but build the 'architecture' to support swapping them in (e.g., use a 'ModelService' interface)."
+  ]
+}
