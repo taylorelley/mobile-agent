@@ -470,7 +470,87 @@ Relevant context:
 {memory_text}"""
     return system_prompt, f"Action: {action_description}"
 
+async def execute_file_operation(tool_name, params):
+    """Execute actual file operations against MongoDB file store."""
+    now_str = datetime.now(timezone.utc).isoformat()
+    directory = params.get("directory", "") or ""
+    filename = params.get("filename", "")
+    file_path = f"{directory}/{filename}".strip("/") if directory else filename
+
+    if tool_name == "create_file":
+        content = params.get("content", "")
+        existing = await db.files.find_one({"path": file_path}, {"_id": 0})
+        if existing:
+            return {"tool": tool_name, "success": False, "error": f"File '{file_path}' already exists. Use edit_file to modify it."}
+        doc = {
+            "id": str(uuid.uuid4()),
+            "filename": filename,
+            "directory": directory,
+            "path": file_path,
+            "content": content,
+            "size_bytes": len(content.encode('utf-8')),
+            "created_at": now_str,
+            "updated_at": now_str,
+        }
+        await db.files.insert_one(doc.copy())
+        return {"tool": tool_name, "success": True, "result": f"File '{file_path}' created ({len(content)} chars)", "params": params}
+
+    elif tool_name == "read_file":
+        file_doc = await db.files.find_one({"path": file_path}, {"_id": 0})
+        if not file_doc:
+            return {"tool": tool_name, "success": False, "error": f"File '{file_path}' not found."}
+        return {"tool": tool_name, "success": True, "result": f"File '{file_path}' content:\n{file_doc['content']}", "params": params, "file_content": file_doc['content']}
+
+    elif tool_name == "edit_file":
+        file_doc = await db.files.find_one({"path": file_path}, {"_id": 0})
+        if not file_doc:
+            return {"tool": tool_name, "success": False, "error": f"File '{file_path}' not found."}
+        mode = params.get("mode", "overwrite")
+        if mode == "append":
+            new_content = file_doc["content"] + params.get("content", "")
+        elif mode == "replace":
+            find_text = params.get("find_text", "")
+            replace_text = params.get("replace_text", "")
+            if find_text and find_text in file_doc["content"]:
+                new_content = file_doc["content"].replace(find_text, replace_text)
+            else:
+                return {"tool": tool_name, "success": False, "error": f"Text '{find_text}' not found in file."}
+        else:
+            new_content = params.get("content", "")
+        await db.files.update_one(
+            {"path": file_path},
+            {"$set": {"content": new_content, "size_bytes": len(new_content.encode('utf-8')), "updated_at": now_str}}
+        )
+        return {"tool": tool_name, "success": True, "result": f"File '{file_path}' updated ({mode}, {len(new_content)} chars)", "params": params}
+
+    elif tool_name == "delete_file":
+        result = await db.files.delete_one({"path": file_path})
+        if result.deleted_count == 0:
+            return {"tool": tool_name, "success": False, "error": f"File '{file_path}' not found."}
+        return {"tool": tool_name, "success": True, "result": f"File '{file_path}' deleted.", "params": params}
+
+    elif tool_name == "list_files":
+        query = {}
+        if directory:
+            query["directory"] = {"$regex": f"^{re.escape(directory)}", "$options": "i"}
+        pattern = params.get("pattern", "")
+        if pattern:
+            regex_pattern = pattern.replace("*", ".*").replace("?", ".")
+            query["filename"] = {"$regex": regex_pattern, "$options": "i"}
+        files = await db.files.find(query, {"_id": 0}).to_list(100)
+        if not files:
+            return {"tool": tool_name, "success": True, "result": "No files found.", "params": params, "files": []}
+        file_list = "\n".join([f"- {f['path']} ({f.get('size_bytes', 0)} bytes, updated {f.get('updated_at', 'unknown')})" for f in files])
+        return {"tool": tool_name, "success": True, "result": f"Found {len(files)} file(s):\n{file_list}", "params": params, "files": [{"path": f["path"], "size_bytes": f.get("size_bytes", 0)} for f in files]}
+
+    return {"tool": tool_name, "success": False, "error": "Unknown file operation"}
+
+
+FILE_TOOLS = {"create_file", "read_file", "edit_file", "delete_file", "list_files"}
+
+
 def simulate_tool_execution(tool_name, params, tools):
+    """Synchronous fallback for non-file tools."""
     tool = next((t for t in tools if t["name"] == tool_name), None)
     if not tool:
         return {"tool": tool_name, "success": False, "error": f"Unknown tool: {tool_name}"}
