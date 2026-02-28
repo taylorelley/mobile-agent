@@ -47,6 +47,9 @@ LobsterLite is a dual-model AI agent mobile application that reimplements OpenCl
 - File operations are real (stored in MongoDB) - not simulated
 - File Manager UI (Settings > File Manager) for manual file management
 - Full in-app editor with monospace font, metadata display, save functionality
+- **Search/Filtering**: Real-time search across filenames, content, and paths
+- **File Renaming**: Rename modal with conflict detection and path updates
+- **Directory Tree View**: Collapsible folder structure with file counts and sizes, toggle to flat view
 - Create file modal with filename, directory, and content inputs
 - File type icons based on extension (.txt, .md, .json, .js, .py, etc.)
 
@@ -79,6 +82,9 @@ LobsterLite is a dual-model AI agent mobile application that reimplements OpenCl
 | /api/tools/custom | POST/DELETE | Custom tool management |
 | /api/files | GET/POST | List/create files |
 | /api/files/:id | GET/PUT/DELETE | Read/update/delete file |
+| /api/files/:id/rename | PATCH | Rename file with conflict detection |
+| /api/files/search/query | GET | Search files by name, content, path |
+| /api/files/directories/tree | GET | Directory tree with file counts and sizes |
 | /api/keywords | GET/PUT | Action keywords |
 | /api/models | GET | Model listing |
 | /api/models/download | POST | Start model download |
