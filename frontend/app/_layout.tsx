@@ -6,26 +6,27 @@ import { ThemeProvider, useTheme } from '../src/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 function NavigationGuard({ children }: { children: React.ReactNode }) {
-  const { colors, resolved } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
-  const segments = useSegments();
   const [isReady, setIsReady] = useState(false);
-  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [checkedOnboarding, setCheckedOnboarding] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem('onboarding_completed').then((val) => {
-      setNeedsOnboarding(val !== 'true');
+      if (val !== 'true') {
+        setCheckedOnboarding(true);
+      }
       setIsReady(true);
     });
   }, []);
 
   useEffect(() => {
     if (!isReady) return;
-    const inOnboarding = segments[0] === 'onboarding';
-    if (needsOnboarding && !inOnboarding) {
+    if (checkedOnboarding) {
+      setCheckedOnboarding(false);
       router.replace('/onboarding');
     }
-  }, [isReady, needsOnboarding, segments]);
+  }, [isReady, checkedOnboarding]);
 
   if (!isReady) {
     return (

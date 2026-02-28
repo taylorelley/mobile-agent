@@ -250,7 +250,7 @@ async def get_soul():
     soul = await db.soul_config.find_one({}, {"_id": 0})
     if not soul:
         soul = {"content": DEFAULT_SOUL, "updated_at": datetime.now(timezone.utc).isoformat()}
-        await db.soul_config.insert_one(soul)
+        await db.soul_config.insert_one(soul.copy())
     return soul
 
 async def get_settings():
@@ -263,14 +263,14 @@ async def get_settings():
             "chat_model": "qwen3-0.6b",
             "action_model": "functiongemma-270m"
         }
-        await db.settings.insert_one(settings)
+        await db.settings.insert_one(settings.copy())
     return settings
 
 async def get_action_keywords():
     kw = await db.action_keywords.find_one({}, {"_id": 0})
     if not kw:
         kw = {"keywords": DEFAULT_ACTION_KEYWORDS}
-        await db.action_keywords.insert_one(kw)
+        await db.action_keywords.insert_one(kw.copy())
     return kw
 
 async def get_tools():
