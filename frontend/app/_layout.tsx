@@ -61,6 +61,7 @@ function InnerLayout() {
           <Stack.Screen name="soul-editor" />
           <Stack.Screen name="keywords" />
           <Stack.Screen name="benchmark" />
+          <Stack.Screen name="files" />
         </Stack>
       </NavigationGuard>
     </View>

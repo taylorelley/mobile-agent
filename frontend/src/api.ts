@@ -58,6 +58,25 @@ export const downloadModel = (modelId: string) =>
   request('/models/download', { method: 'POST', body: JSON.stringify({ model_id: modelId }) });
 export const getModelStatus = (modelId: string) => request(`/models/${modelId}/status`);
 
+// Files
+export const getFiles = (directory?: string, pattern?: string) => {
+  const params = new URLSearchParams();
+  if (directory) params.set('directory', directory);
+  if (pattern) params.set('pattern', pattern);
+  const qs = params.toString();
+  return request(`/files${qs ? `?${qs}` : ''}`);
+};
+export const getFile = (fileId: string) => request(`/files/${encodeURIComponent(fileId)}`);
+export const createFile = (filename: string, content: string, directory?: string) =>
+  request('/files', { method: 'POST', body: JSON.stringify({ filename, content, directory: directory || '' }) });
+export const updateFile = (fileId: string, content: string, mode?: string, find_text?: string, replace_text?: string) =>
+  request(`/files/${encodeURIComponent(fileId)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ content, mode: mode || 'overwrite', find_text, replace_text }),
+  });
+export const deleteFile = (fileId: string) =>
+  request(`/files/${encodeURIComponent(fileId)}`, { method: 'DELETE' });
+
 // Settings
 export const getSettings = () => request('/settings');
 export const updateSettings = (settings: any) =>
