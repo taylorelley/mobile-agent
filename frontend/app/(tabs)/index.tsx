@@ -173,7 +173,7 @@ export default function ChatScreen() {
         Your on-device AI agent. Ask me anything or request a device action.
       </Text>
       <View style={styles.emptyChips}>
-        {['Tell me a joke', 'Set an alarm for 7am', 'What can you do?'].map((txt) => (
+        {['Tell me a joke', 'Set an alarm for 7am', 'Create a file called notes.txt'].map((txt) => (
           <TouchableOpacity
             key={txt}
             testID={`suggestion-${txt.replace(/\s/g, '-').toLowerCase()}`}
