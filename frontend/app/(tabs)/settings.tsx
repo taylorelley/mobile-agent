@@ -64,7 +64,8 @@ export default function SettingsScreen() {
       title: 'Data',
       rows: [
         { icon: 'brain', label: 'Memory Manager', subtitle: 'Facts & conversation history', route: '/memory', testID: 'settings-memory' },
-        { icon: 'toolbox-outline', label: 'Tool Manager', subtitle: '10 built-in + custom tools', route: '/tools', testID: 'settings-tools' },
+        { icon: 'folder-outline', label: 'File Manager', subtitle: 'Access & edit local files', route: '/files', testID: 'settings-files' },
+        { icon: 'toolbox-outline', label: 'Tool Manager', subtitle: '16 built-in + custom tools', route: '/tools', testID: 'settings-tools' },
       ],
     },
     {
