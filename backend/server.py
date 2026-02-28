@@ -848,6 +848,82 @@ async def delete_custom_tool(tool_name: str):
         raise HTTPException(status_code=404, detail="Custom tool not found")
     return {"deleted": True}
 
+# ─── File Endpoints ───
+
+@api_router.get("/files")
+async def list_files_endpoint(directory: Optional[str] = None, pattern: Optional[str] = None):
+    query = {}
+    if directory:
+        query["directory"] = {"$regex": f"^{re.escape(directory)}", "$options": "i"}
+    if pattern:
+        regex_pattern = pattern.replace("*", ".*").replace("?", ".")
+        query["filename"] = {"$regex": regex_pattern, "$options": "i"}
+    files = await db.files.find(query, {"_id": 0}).sort("updated_at", -1).to_list(100)
+    return files
+
+@api_router.get("/files/{file_id}")
+async def get_file_endpoint(file_id: str):
+    file_doc = await db.files.find_one({"id": file_id}, {"_id": 0})
+    if not file_doc:
+        file_doc = await db.files.find_one({"path": file_id}, {"_id": 0})
+    if not file_doc:
+        raise HTTPException(status_code=404, detail="File not found")
+    return file_doc
+
+@api_router.post("/files")
+async def create_file_endpoint(file: FileCreate):
+    directory = file.directory or ""
+    file_path = f"{directory}/{file.filename}".strip("/") if directory else file.filename
+    existing = await db.files.find_one({"path": file_path}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=409, detail=f"File '{file_path}' already exists")
+    now_str = datetime.now(timezone.utc).isoformat()
+    doc = {
+        "id": str(uuid.uuid4()),
+        "filename": file.filename,
+        "directory": directory,
+        "path": file_path,
+        "content": file.content,
+        "size_bytes": len(file.content.encode('utf-8')),
+        "created_at": now_str,
+        "updated_at": now_str,
+    }
+    await db.files.insert_one(doc.copy())
+    return doc
+
+@api_router.put("/files/{file_id}")
+async def update_file_endpoint(file_id: str, update: FileUpdate):
+    file_doc = await db.files.find_one({"id": file_id}, {"_id": 0})
+    if not file_doc:
+        file_doc = await db.files.find_one({"path": file_id}, {"_id": 0})
+    if not file_doc:
+        raise HTTPException(status_code=404, detail="File not found")
+    now_str = datetime.now(timezone.utc).isoformat()
+    mode = update.mode or "overwrite"
+    if mode == "append":
+        new_content = file_doc["content"] + (update.content or "")
+    elif mode == "replace" and update.find_text:
+        new_content = file_doc["content"].replace(update.find_text, update.replace_text or "")
+    else:
+        new_content = update.content or ""
+    update_fields = {
+        "content": new_content,
+        "size_bytes": len(new_content.encode('utf-8')),
+        "updated_at": now_str,
+    }
+    await db.files.update_one({"path": file_doc["path"]}, {"$set": update_fields})
+    file_doc.update(update_fields)
+    return file_doc
+
+@api_router.delete("/files/{file_id}")
+async def delete_file_endpoint(file_id: str):
+    result = await db.files.delete_one({"id": file_id})
+    if result.deleted_count == 0:
+        result = await db.files.delete_one({"path": file_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="File not found")
+    return {"deleted": True}
+
 # ─── Keywords Endpoints ───
 
 @api_router.get("/keywords")
