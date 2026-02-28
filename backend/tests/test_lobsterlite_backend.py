@@ -6,7 +6,15 @@ import time
 # Backend API Tests for LobsterLite
 # Tests: health, soul, tools, keywords, models, settings, memory/facts, conversations, chat
 
-BASE_URL = os.environ['EXPO_PUBLIC_BACKEND_URL'].rstrip('/')
+# Read from frontend .env file
+try:
+    with open('/app/frontend/.env', 'r') as f:
+        for line in f:
+            if line.startswith('EXPO_PUBLIC_BACKEND_URL='):
+                BASE_URL = line.split('=')[1].strip().rstrip('/')
+                break
+except:
+    BASE_URL = "https://offline-assistant-26.preview.emergentagent.com"
 
 class TestHealth:
     """Health check endpoint tests"""
