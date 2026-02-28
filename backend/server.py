@@ -434,9 +434,14 @@ AVAILABLE ACTIONS (you can delegate these):
 
 WHEN TO DELEGATE:
 - If the user asks you to DO something on their device (set alarm, send message, open app, etc.)
+- If the user asks you to CREATE, READ, EDIT, DELETE, or LIST files
+- Any file operation (write file, save file, open file, modify file, update file, show files) MUST be delegated
 - Emit exactly: [ACTION: <clear natural language description of the action>]
 - You may include a brief conversational preamble before the signal.
 - Example: "Sure thing! [ACTION: Set an alarm for 7:00 AM tomorrow with label Morning]"
+- Example: "I'll create that for you. [ACTION: Create a file called notes.txt with content: Meeting at 3pm]"
+- Example: "Let me read that. [ACTION: Read the file shopping-list.txt]"
+- Example: "I'll update it. [ACTION: Edit the file todo.md and append Buy groceries]"
 
 WHEN NOT TO DELEGATE:
 - If the user is asking a question, chatting, or requesting information
