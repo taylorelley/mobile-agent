@@ -627,7 +627,10 @@ async def send_chat(msg: ChatMessage):
                 else:
                     tool_name = parsed.get("tool", "")
                     params = parsed.get("params", {})
-                    tool_result = simulate_tool_execution(tool_name, params, tools)
+                    if tool_name in FILE_TOOLS:
+                        tool_result = await execute_file_operation(tool_name, params)
+                    else:
+                        tool_result = simulate_tool_execution(tool_name, params, tools)
                     tool_calls_str = json.dumps({"call": parsed, "result": tool_result})
             else:
                 tool_result = {"tool": "unknown", "success": False, "error": "Could not parse function call"}
@@ -636,7 +639,7 @@ async def send_chat(msg: ChatMessage):
             tool_calls_str = json.dumps({"raw": action_response, "error": str(e)})
 
         # Step 5: Chat Model confirmation
-        confirm_system = "You are LobsterLite. The user asked you to perform an action. The action has been executed. Provide a brief, friendly confirmation to the user."
+        confirm_system = "You are LobsterLite. The user asked you to perform an action. The action has been executed. Provide a brief, friendly confirmation to the user. If the action involved reading a file, include the file content in your response."
         confirm_chat = LlmChat(api_key=api_key, session_id=f"confirm-{uuid.uuid4().hex[:8]}", system_message=confirm_system)
         confirm_chat.with_model("openai", "gpt-4.1-mini")
         tool_result_text = json.dumps(tool_result)
