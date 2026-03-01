@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import pytest
 import requests
@@ -6,11 +7,15 @@ import requests
 # Backend API Tests for File Manager Enhancements
 # Tests: File rename, file search (by name and content), directory tree view
 
+# Default timeout (seconds) for all HTTP requests to prevent hangs
+REQUEST_TIMEOUT = 30
+
 # Resolve backend URL from environment or frontend .env file
 BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "").rstrip("/")
 if not BASE_URL:
+    _env_path = Path(__file__).resolve().parents[1] / ".." / "frontend" / ".env"
     try:
-        with open("/app/frontend/.env", "r") as f:
+        with open(_env_path, "r") as f:
             for line in f:
                 if line.startswith("EXPO_PUBLIC_BACKEND_URL="):
                     BASE_URL = line.split("=", 1)[1].strip().rstrip("/")
@@ -36,16 +41,20 @@ class TestFileRename:
                 "content": "This file will be renamed",
                 "directory": "",
             },
+            timeout=REQUEST_TIMEOUT,
         )
         if response.status_code == 409:
             # File already exists, delete and recreate
-            files_resp = requests.get(f"{BASE_URL}/api/files")
+            files_resp = requests.get(f"{BASE_URL}/api/files", timeout=REQUEST_TIMEOUT)
             files = files_resp.json()
             existing = next(
                 (f for f in files if f["filename"] == "TEST_rename_me.txt"), None
             )
             if existing:
-                requests.delete(f"{BASE_URL}/api/files/{existing['id']}")
+                requests.delete(
+                    f"{BASE_URL}/api/files/{existing['id']}",
+                    timeout=REQUEST_TIMEOUT,
+                )
             response = requests.post(
                 f"{BASE_URL}/api/files",
                 json={
@@ -53,6 +62,7 @@ class TestFileRename:
                     "content": "This file will be renamed",
                     "directory": "",
                 },
+                timeout=REQUEST_TIMEOUT,
             )
         assert response.status_code == 200
         data = response.json()
@@ -65,6 +75,7 @@ class TestFileRename:
         response = requests.patch(
             f"{BASE_URL}/api/files/{TestFileRename.test_file_id}/rename",
             json={"new_filename": "TEST_renamed_file.txt"},
+            timeout=REQUEST_TIMEOUT,
         )
         assert response.status_code == 200
         data = response.json()
@@ -78,7 +89,8 @@ class TestFileRename:
 
         # Verify persistence with GET
         get_response = requests.get(
-            f"{BASE_URL}/api/files/{TestFileRename.test_file_id}"
+            f"{BASE_URL}/api/files/{TestFileRename.test_file_id}",
+            timeout=REQUEST_TIMEOUT,
         )
         assert get_response.status_code == 200
         get_data = get_response.json()
@@ -96,15 +108,21 @@ class TestFileRename:
                 "content": "File in directory",
                 "directory": "test_dir",
             },
+            timeout=REQUEST_TIMEOUT,
         )
         if create_resp.status_code == 409:
-            files_resp = requests.get(f"{BASE_URL}/api/files")
+            files_resp = requests.get(
+                f"{BASE_URL}/api/files", timeout=REQUEST_TIMEOUT
+            )
             files = files_resp.json()
             existing = next(
                 (f for f in files if f["path"] == "test_dir/TEST_dir_rename.md"), None
             )
             if existing:
-                requests.delete(f"{BASE_URL}/api/files/{existing['id']}")
+                requests.delete(
+                    f"{BASE_URL}/api/files/{existing['id']}",
+                    timeout=REQUEST_TIMEOUT,
+                )
             create_resp = requests.post(
                 f"{BASE_URL}/api/files",
                 json={
@@ -112,6 +130,7 @@ class TestFileRename:
                     "content": "File in directory",
                     "directory": "test_dir",
                 },
+                timeout=REQUEST_TIMEOUT,
             )
         assert create_resp.status_code == 200
         file_id = create_resp.json()["id"]
@@ -120,6 +139,7 @@ class TestFileRename:
         rename_resp = requests.patch(
             f"{BASE_URL}/api/files/{file_id}/rename",
             json={"new_filename": "TEST_renamed_in_dir.md"},
+            timeout=REQUEST_TIMEOUT,
         )
         assert rename_resp.status_code == 200
         data = rename_resp.json()
@@ -131,7 +151,9 @@ class TestFileRename:
         )
 
         # Cleanup
-        requests.delete(f"{BASE_URL}/api/files/{file_id}")
+        requests.delete(
+            f"{BASE_URL}/api/files/{file_id}", timeout=REQUEST_TIMEOUT
+        )
 
     def test_04_rename_file_conflict_409(self):
         """Test PATCH /api/files/{id}/rename returns 409 if target name already exists"""
@@ -143,6 +165,7 @@ class TestFileRename:
                 "content": "This file already exists",
                 "directory": "",
             },
+            timeout=REQUEST_TIMEOUT,
         )
         if response.status_code == 409:
             print(f"✓ Target file already exists, skipping creation")
@@ -154,6 +177,7 @@ class TestFileRename:
         rename_resp = requests.patch(
             f"{BASE_URL}/api/files/{TestFileRename.test_file_id}/rename",
             json={"new_filename": "TEST_target_exists.txt"},
+            timeout=REQUEST_TIMEOUT,
         )
         assert (
             rename_resp.status_code == 409
@@ -161,7 +185,10 @@ class TestFileRename:
         print(f"✓ Rename to existing filename blocked with 409 status")
 
         # Verify original file still has old name
-        get_resp = requests.get(f"{BASE_URL}/api/files/{TestFileRename.test_file_id}")
+        get_resp = requests.get(
+            f"{BASE_URL}/api/files/{TestFileRename.test_file_id}",
+            timeout=REQUEST_TIMEOUT,
+        )
         assert get_resp.json()["filename"] == "TEST_renamed_file.txt"
         print(f"✓ Original file unchanged after conflict")
 
@@ -170,6 +197,7 @@ class TestFileRename:
         response = requests.patch(
             f"{BASE_URL}/api/files/{TestFileRename.test_file_id}/rename",
             json={"new_filename": ""},
+            timeout=REQUEST_TIMEOUT,
         )
         assert response.status_code == 400
         print(f"✓ Empty filename blocked with 400 status")
@@ -179,13 +207,14 @@ class TestFileRename:
         response = requests.patch(
             f"{BASE_URL}/api/files/nonexistent-file-id-12345/rename",
             json={"new_filename": "new_name.txt"},
+            timeout=REQUEST_TIMEOUT,
         )
         assert response.status_code == 404
         print(f"✓ Rename non-existent file returns 404")
 
     def test_99_cleanup_rename_test_files(self):
         """Cleanup: Delete test files created during rename tests"""
-        files_resp = requests.get(f"{BASE_URL}/api/files")
+        files_resp = requests.get(f"{BASE_URL}/api/files", timeout=REQUEST_TIMEOUT)
         if files_resp.status_code == 200:
             files = files_resp.json()
             test_files = [
@@ -198,7 +227,9 @@ class TestFileRename:
                 )
             ]
             for file in test_files:
-                delete_resp = requests.delete(f"{BASE_URL}/api/files/{file['id']}")
+                delete_resp = requests.delete(
+                    f"{BASE_URL}/api/files/{file['id']}", timeout=REQUEST_TIMEOUT
+                )
                 if delete_resp.status_code == 200:
                     print(f"✓ Cleaned up: {file['path']}")
 
@@ -233,10 +264,14 @@ class TestFileSearch:
 
         TestFileSearch.created_ids = []
         for file_data in test_files:
-            response = requests.post(f"{BASE_URL}/api/files", json=file_data)
+            response = requests.post(
+                f"{BASE_URL}/api/files", json=file_data, timeout=REQUEST_TIMEOUT
+            )
             if response.status_code == 409:
                 # File exists, get its ID
-                files_resp = requests.get(f"{BASE_URL}/api/files")
+                files_resp = requests.get(
+                    f"{BASE_URL}/api/files", timeout=REQUEST_TIMEOUT
+                )
                 files = files_resp.json()
                 path = (
                     f"{file_data['directory']}/{file_data['filename']}".strip("/")
@@ -249,6 +284,7 @@ class TestFileSearch:
                     requests.put(
                         f"{BASE_URL}/api/files/{existing['id']}",
                         json={"content": file_data["content"], "mode": "overwrite"},
+                        timeout=REQUEST_TIMEOUT,
                     )
                     TestFileSearch.created_ids.append(existing["id"])
                     print(f"✓ Updated existing file: {path}")
@@ -259,7 +295,9 @@ class TestFileSearch:
 
     def test_02_search_files_by_name(self):
         """Test GET /api/files/search/query finds files by filename"""
-        response = requests.get(f"{BASE_URL}/api/files/search/query?q=shopping")
+        response = requests.get(
+            f"{BASE_URL}/api/files/search/query?q=shopping", timeout=REQUEST_TIMEOUT
+        )
         assert response.status_code == 200
         results = response.json()
         assert isinstance(results, list)
@@ -278,7 +316,9 @@ class TestFileSearch:
 
     def test_03_search_files_by_content(self):
         """Test GET /api/files/search/query finds files by content"""
-        response = requests.get(f"{BASE_URL}/api/files/search/query?q=groceries")
+        response = requests.get(
+            f"{BASE_URL}/api/files/search/query?q=groceries", timeout=REQUEST_TIMEOUT
+        )
         assert response.status_code == 200
         results = response.json()
         assert isinstance(results, list)
@@ -293,7 +333,9 @@ class TestFileSearch:
 
     def test_04_search_files_by_path(self):
         """Test GET /api/files/search/query searches path as well"""
-        response = requests.get(f"{BASE_URL}/api/files/search/query?q=documents")
+        response = requests.get(
+            f"{BASE_URL}/api/files/search/query?q=documents", timeout=REQUEST_TIMEOUT
+        )
         assert response.status_code == 200
         results = response.json()
         assert isinstance(results, list)
@@ -305,8 +347,12 @@ class TestFileSearch:
 
     def test_05_search_files_case_insensitive(self):
         """Test GET /api/files/search/query is case-insensitive"""
-        response_lower = requests.get(f"{BASE_URL}/api/files/search/query?q=recipe")
-        response_upper = requests.get(f"{BASE_URL}/api/files/search/query?q=RECIPE")
+        response_lower = requests.get(
+            f"{BASE_URL}/api/files/search/query?q=recipe", timeout=REQUEST_TIMEOUT
+        )
+        response_upper = requests.get(
+            f"{BASE_URL}/api/files/search/query?q=RECIPE", timeout=REQUEST_TIMEOUT
+        )
 
         assert response_lower.status_code == 200
         assert response_upper.status_code == 200
@@ -323,7 +369,8 @@ class TestFileSearch:
     def test_06_search_files_with_directory_filter(self):
         """Test GET /api/files/search/query with directory filter"""
         response = requests.get(
-            f"{BASE_URL}/api/files/search/query?q=TEST&directory=documents"
+            f"{BASE_URL}/api/files/search/query?q=TEST&directory=documents",
+            timeout=REQUEST_TIMEOUT,
         )
         assert response.status_code == 200
         results = response.json()
@@ -341,7 +388,8 @@ class TestFileSearch:
     def test_07_search_files_no_results(self):
         """Test GET /api/files/search/query returns empty array for no matches"""
         response = requests.get(
-            f"{BASE_URL}/api/files/search/query?q=nonexistentquery12345xyz"
+            f"{BASE_URL}/api/files/search/query?q=nonexistentquery12345xyz",
+            timeout=REQUEST_TIMEOUT,
         )
         assert response.status_code == 200
         results = response.json()
@@ -351,7 +399,9 @@ class TestFileSearch:
 
     def test_08_search_files_excludes_content_in_response(self):
         """Test GET /api/files/search/query excludes content field for performance"""
-        response = requests.get(f"{BASE_URL}/api/files/search/query?q=shopping")
+        response = requests.get(
+            f"{BASE_URL}/api/files/search/query?q=shopping", timeout=REQUEST_TIMEOUT
+        )
         assert response.status_code == 200
         results = response.json()
 
@@ -366,7 +416,9 @@ class TestFileSearch:
         """Cleanup: Delete test files created during search tests"""
         if hasattr(TestFileSearch, "created_ids"):
             for file_id in TestFileSearch.created_ids:
-                delete_resp = requests.delete(f"{BASE_URL}/api/files/{file_id}")
+                delete_resp = requests.delete(
+                    f"{BASE_URL}/api/files/{file_id}", timeout=REQUEST_TIMEOUT
+                )
                 if delete_resp.status_code == 200:
                     print(f"✓ Cleaned up search test file (id: {file_id})")
 
@@ -403,9 +455,13 @@ class TestDirectoryTree:
 
         TestDirectoryTree.created_ids = []
         for file_data in test_files:
-            response = requests.post(f"{BASE_URL}/api/files", json=file_data)
+            response = requests.post(
+                f"{BASE_URL}/api/files", json=file_data, timeout=REQUEST_TIMEOUT
+            )
             if response.status_code == 409:
-                files_resp = requests.get(f"{BASE_URL}/api/files")
+                files_resp = requests.get(
+                    f"{BASE_URL}/api/files", timeout=REQUEST_TIMEOUT
+                )
                 files = files_resp.json()
                 path = (
                     f"{file_data['directory']}/{file_data['filename']}".strip("/")
@@ -422,7 +478,9 @@ class TestDirectoryTree:
 
     def test_02_get_directory_tree_returns_structure(self):
         """Test GET /api/files/directories/tree returns directory tree structure"""
-        response = requests.get(f"{BASE_URL}/api/files/directories/tree")
+        response = requests.get(
+            f"{BASE_URL}/api/files/directories/tree", timeout=REQUEST_TIMEOUT
+        )
         assert response.status_code == 200
         tree = response.json()
         assert isinstance(tree, list)
@@ -431,7 +489,9 @@ class TestDirectoryTree:
 
     def test_03_tree_includes_root_directory(self):
         """Test directory tree includes Root directory"""
-        response = requests.get(f"{BASE_URL}/api/files/directories/tree")
+        response = requests.get(
+            f"{BASE_URL}/api/files/directories/tree", timeout=REQUEST_TIMEOUT
+        )
         tree = response.json()
 
         root_dir = next(
@@ -450,7 +510,9 @@ class TestDirectoryTree:
 
     def test_04_tree_includes_subdirectories(self):
         """Test directory tree includes subdirectories"""
-        response = requests.get(f"{BASE_URL}/api/files/directories/tree")
+        response = requests.get(
+            f"{BASE_URL}/api/files/directories/tree", timeout=REQUEST_TIMEOUT
+        )
         tree = response.json()
 
         # Should have documents, projects, etc.
@@ -473,7 +535,9 @@ class TestDirectoryTree:
 
     def test_05_tree_has_correct_file_counts(self):
         """Test directory tree has correct file counts per directory"""
-        response = requests.get(f"{BASE_URL}/api/files/directories/tree")
+        response = requests.get(
+            f"{BASE_URL}/api/files/directories/tree", timeout=REQUEST_TIMEOUT
+        )
         tree = response.json()
 
         for dir_node in tree:
@@ -486,7 +550,9 @@ class TestDirectoryTree:
 
     def test_06_tree_has_correct_total_size(self):
         """Test directory tree calculates total_size correctly"""
-        response = requests.get(f"{BASE_URL}/api/files/directories/tree")
+        response = requests.get(
+            f"{BASE_URL}/api/files/directories/tree", timeout=REQUEST_TIMEOUT
+        )
         tree = response.json()
 
         for dir_node in tree:
@@ -499,7 +565,9 @@ class TestDirectoryTree:
 
     def test_07_tree_files_have_required_fields(self):
         """Test files in tree have required fields"""
-        response = requests.get(f"{BASE_URL}/api/files/directories/tree")
+        response = requests.get(
+            f"{BASE_URL}/api/files/directories/tree", timeout=REQUEST_TIMEOUT
+        )
         tree = response.json()
 
         required_file_fields = ["id", "filename", "path", "size_bytes", "updated_at"]
@@ -513,7 +581,9 @@ class TestDirectoryTree:
 
     def test_08_tree_excludes_content_field(self):
         """Test directory tree excludes content field for performance"""
-        response = requests.get(f"{BASE_URL}/api/files/directories/tree")
+        response = requests.get(
+            f"{BASE_URL}/api/files/directories/tree", timeout=REQUEST_TIMEOUT
+        )
         tree = response.json()
 
         for dir_node in tree:
@@ -525,7 +595,9 @@ class TestDirectoryTree:
 
     def test_09_tree_depth_calculation(self):
         """Test directory tree calculates depth correctly"""
-        response = requests.get(f"{BASE_URL}/api/files/directories/tree")
+        response = requests.get(
+            f"{BASE_URL}/api/files/directories/tree", timeout=REQUEST_TIMEOUT
+        )
         tree = response.json()
 
         for dir_node in tree:
@@ -544,7 +616,9 @@ class TestDirectoryTree:
 
     def test_10_tree_files_sorted_by_filename(self):
         """Test files in each directory are sorted by filename"""
-        response = requests.get(f"{BASE_URL}/api/files/directories/tree")
+        response = requests.get(
+            f"{BASE_URL}/api/files/directories/tree", timeout=REQUEST_TIMEOUT
+        )
         tree = response.json()
 
         for dir_node in tree:
@@ -560,7 +634,9 @@ class TestDirectoryTree:
         """Cleanup: Delete test files created during tree tests"""
         if hasattr(TestDirectoryTree, "created_ids"):
             for file_id in TestDirectoryTree.created_ids:
-                delete_resp = requests.delete(f"{BASE_URL}/api/files/{file_id}")
+                delete_resp = requests.delete(
+                    f"{BASE_URL}/api/files/{file_id}", timeout=REQUEST_TIMEOUT
+                )
                 if delete_resp.status_code == 200:
                     print(f"✓ Cleaned up tree test file (id: {file_id})")
 

@@ -1,5 +1,6 @@
 import os
 import time
+from pathlib import Path
 
 import pytest
 import requests
@@ -7,11 +8,17 @@ import requests
 # Backend API Tests for File Management Features
 # Tests: File CRUD operations, file tools in chat integration
 
+# Default timeout (seconds) for all HTTP requests to prevent hangs
+REQUEST_TIMEOUT = 30
+# Chat requests may take longer due to LLM inference
+CHAT_TIMEOUT = 60
+
 # Resolve backend URL from environment or frontend .env file
 BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "").rstrip("/")
 if not BASE_URL:
+    _env_path = Path(__file__).resolve().parents[1] / ".." / "frontend" / ".env"
     try:
-        with open("/app/frontend/.env", "r") as f:
+        with open(_env_path, "r") as f:
             for line in f:
                 if line.startswith("EXPO_PUBLIC_BACKEND_URL="):
                     BASE_URL = line.split("=", 1)[1].strip().rstrip("/")
@@ -37,6 +44,7 @@ class TestFileAPIs:
                 "content": "Hello from pytest test suite",
                 "directory": "",
             },
+            timeout=REQUEST_TIMEOUT,
         )
         assert response.status_code == 200
         data = response.json()
@@ -62,6 +70,7 @@ class TestFileAPIs:
                 "content": "# Test File\nThis is in a subdirectory",
                 "directory": "pytest_tests",
             },
+            timeout=REQUEST_TIMEOUT,
         )
         assert response.status_code == 200
         data = response.json()
@@ -80,13 +89,14 @@ class TestFileAPIs:
                 "content": "This should fail",
                 "directory": "",
             },
+            timeout=REQUEST_TIMEOUT,
         )
         assert response.status_code == 409  # Conflict
         print(f"✓ Duplicate file creation blocked with 409 status")
 
     def test_04_list_files_returns_all_files(self):
         """Test GET /api/files returns list of all files"""
-        response = requests.get(f"{BASE_URL}/api/files")
+        response = requests.get(f"{BASE_URL}/api/files", timeout=REQUEST_TIMEOUT)
         assert response.status_code == 200
         files = response.json()
         assert isinstance(files, list)
@@ -99,7 +109,9 @@ class TestFileAPIs:
 
     def test_05_list_files_with_directory_filter(self):
         """Test GET /api/files with directory filter"""
-        response = requests.get(f"{BASE_URL}/api/files?directory=pytest_tests")
+        response = requests.get(
+            f"{BASE_URL}/api/files?directory=pytest_tests", timeout=REQUEST_TIMEOUT
+        )
         assert response.status_code == 200
         files = response.json()
         assert isinstance(files, list)
@@ -110,7 +122,9 @@ class TestFileAPIs:
 
     def test_06_list_files_with_pattern_filter(self):
         """Test GET /api/files with pattern filter"""
-        response = requests.get(f"{BASE_URL}/api/files?pattern=*.txt")
+        response = requests.get(
+            f"{BASE_URL}/api/files?pattern=*.txt", timeout=REQUEST_TIMEOUT
+        )
         assert response.status_code == 200
         files = response.json()
         assert isinstance(files, list)
@@ -121,7 +135,10 @@ class TestFileAPIs:
 
     def test_07_get_file_by_id_returns_full_content(self):
         """Test GET /api/files/{id} returns file with full content"""
-        response = requests.get(f"{BASE_URL}/api/files/{TestFileAPIs.test_file_id}")
+        response = requests.get(
+            f"{BASE_URL}/api/files/{TestFileAPIs.test_file_id}",
+            timeout=REQUEST_TIMEOUT,
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == TestFileAPIs.test_file_id
@@ -135,7 +152,9 @@ class TestFileAPIs:
 
     def test_08_get_file_by_path_returns_file(self):
         """Test GET /api/files/{path} also works with path instead of id"""
-        response = requests.get(f"{BASE_URL}/api/files/TEST_pytest_file.txt")
+        response = requests.get(
+            f"{BASE_URL}/api/files/TEST_pytest_file.txt", timeout=REQUEST_TIMEOUT
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["filename"] == "TEST_pytest_file.txt"
@@ -143,7 +162,9 @@ class TestFileAPIs:
 
     def test_09_get_file_not_found(self):
         """Test GET /api/files/{id} returns 404 for non-existent file"""
-        response = requests.get(f"{BASE_URL}/api/files/nonexistent-file-id-12345")
+        response = requests.get(
+            f"{BASE_URL}/api/files/nonexistent-file-id-12345", timeout=REQUEST_TIMEOUT
+        )
         assert response.status_code == 404
         print(f"✓ GET /api/files/nonexistent returns 404")
 
@@ -152,6 +173,7 @@ class TestFileAPIs:
         response = requests.put(
             f"{BASE_URL}/api/files/{TestFileAPIs.test_file_id}",
             json={"content": "Updated content via pytest", "mode": "overwrite"},
+            timeout=REQUEST_TIMEOUT,
         )
         assert response.status_code == 200
         data = response.json()
@@ -162,7 +184,10 @@ class TestFileAPIs:
         )
 
         # Verify persistence with GET
-        get_response = requests.get(f"{BASE_URL}/api/files/{TestFileAPIs.test_file_id}")
+        get_response = requests.get(
+            f"{BASE_URL}/api/files/{TestFileAPIs.test_file_id}",
+            timeout=REQUEST_TIMEOUT,
+        )
         assert get_response.status_code == 200
         get_data = get_response.json()
         assert get_data["content"] == "Updated content via pytest"
@@ -173,6 +198,7 @@ class TestFileAPIs:
         response = requests.put(
             f"{BASE_URL}/api/files/{TestFileAPIs.test_file_id}",
             json={"content": "\nAppended line 1\nAppended line 2", "mode": "append"},
+            timeout=REQUEST_TIMEOUT,
         )
         assert response.status_code == 200
         data = response.json()
@@ -182,7 +208,10 @@ class TestFileAPIs:
         print(f"✓ PUT /api/files/{TestFileAPIs.test_file_id} (append) appended content")
 
         # Verify persistence
-        get_response = requests.get(f"{BASE_URL}/api/files/{TestFileAPIs.test_file_id}")
+        get_response = requests.get(
+            f"{BASE_URL}/api/files/{TestFileAPIs.test_file_id}",
+            timeout=REQUEST_TIMEOUT,
+        )
         get_data = get_response.json()
         expected = "Updated content via pytest\nAppended line 1\nAppended line 2"
         assert get_data["content"] == expected
@@ -197,6 +226,7 @@ class TestFileAPIs:
                 "find_text": "Appended line 1",
                 "replace_text": "REPLACED LINE 1",
             },
+            timeout=REQUEST_TIMEOUT,
         )
         assert response.status_code == 200
         data = response.json()
@@ -209,33 +239,42 @@ class TestFileAPIs:
         response = requests.put(
             f"{BASE_URL}/api/files/nonexistent-file-id",
             json={"content": "test", "mode": "overwrite"},
+            timeout=REQUEST_TIMEOUT,
         )
         assert response.status_code == 404
         print(f"✓ PUT /api/files/nonexistent returns 404")
 
     def test_14_delete_file_success(self):
         """Test DELETE /api/files/{id} deletes file"""
-        response = requests.delete(f"{BASE_URL}/api/files/{TestFileAPIs.test_file_id}")
+        response = requests.delete(
+            f"{BASE_URL}/api/files/{TestFileAPIs.test_file_id}",
+            timeout=REQUEST_TIMEOUT,
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["deleted"] == True
         print(f"✓ DELETE /api/files/{TestFileAPIs.test_file_id} deleted file")
 
         # Verify file no longer exists
-        get_response = requests.get(f"{BASE_URL}/api/files/{TestFileAPIs.test_file_id}")
+        get_response = requests.get(
+            f"{BASE_URL}/api/files/{TestFileAPIs.test_file_id}",
+            timeout=REQUEST_TIMEOUT,
+        )
         assert get_response.status_code == 404
         print(f"✓ Deleted file no longer retrievable")
 
     def test_15_delete_file_not_found(self):
         """Test DELETE /api/files/{id} returns 404 for non-existent file"""
-        response = requests.delete(f"{BASE_URL}/api/files/nonexistent-file-id")
+        response = requests.delete(
+            f"{BASE_URL}/api/files/nonexistent-file-id", timeout=REQUEST_TIMEOUT
+        )
         assert response.status_code == 404
         print(f"✓ DELETE /api/files/nonexistent returns 404")
 
     def test_99_cleanup_test_files(self):
         """Cleanup: Delete all test files created during testing"""
         # Get all files
-        response = requests.get(f"{BASE_URL}/api/files")
+        response = requests.get(f"{BASE_URL}/api/files", timeout=REQUEST_TIMEOUT)
         if response.status_code == 200:
             files = response.json()
             test_files = [
@@ -244,7 +283,9 @@ class TestFileAPIs:
                 if "TEST_" in f["filename"] or "pytest" in f.get("directory", "")
             ]
             for file in test_files:
-                delete_response = requests.delete(f"{BASE_URL}/api/files/{file['id']}")
+                delete_response = requests.delete(
+                    f"{BASE_URL}/api/files/{file['id']}", timeout=REQUEST_TIMEOUT
+                )
                 if delete_response.status_code == 200:
                     print(f"✓ Cleaned up test file: {file['path']}")
         print(f"✓ Test cleanup completed")
@@ -255,7 +296,7 @@ class TestToolsWithFileTools:
 
     def test_get_tools_returns_15_total_tools(self):
         """Test /api/tools GET now returns 15 built-in tools (10 original + 5 file tools)"""
-        response = requests.get(f"{BASE_URL}/api/tools")
+        response = requests.get(f"{BASE_URL}/api/tools", timeout=REQUEST_TIMEOUT)
         assert response.status_code == 200
         tools = response.json()
         assert isinstance(tools, list)
@@ -269,7 +310,7 @@ class TestToolsWithFileTools:
 
     def test_file_tools_are_present(self):
         """Test /api/tools includes all 5 file management tools"""
-        response = requests.get(f"{BASE_URL}/api/tools")
+        response = requests.get(f"{BASE_URL}/api/tools", timeout=REQUEST_TIMEOUT)
         assert response.status_code == 200
         tools = response.json()
         tool_names = [t["name"] for t in tools]
@@ -289,7 +330,7 @@ class TestToolsWithFileTools:
 
     def test_file_tools_have_correct_structure(self):
         """Test file tools have required fields and correct structure"""
-        response = requests.get(f"{BASE_URL}/api/tools")
+        response = requests.get(f"{BASE_URL}/api/tools", timeout=REQUEST_TIMEOUT)
         tools = response.json()
 
         file_tools = [
@@ -322,6 +363,7 @@ class TestChatFileOperations:
                 "message": "Create a file called TEST_agent_created.txt with content: Hello from AI agent",
                 "session_id": "test-file-session-1",
             },
+            timeout=CHAT_TIMEOUT,
         )
         assert response.status_code == 200
         data = response.json()
@@ -350,7 +392,9 @@ class TestChatFileOperations:
         time.sleep(0.5)
 
         # Verify file was actually created by getting file list
-        files_response = requests.get(f"{BASE_URL}/api/files")
+        files_response = requests.get(
+            f"{BASE_URL}/api/files", timeout=REQUEST_TIMEOUT
+        )
         files = files_response.json()
         created_file = next(
             (f for f in files if f["filename"] == "TEST_agent_created.txt"), None
@@ -370,6 +414,7 @@ class TestChatFileOperations:
                 "message": "Read the file TEST_agent_created.txt",
                 "session_id": "test-file-session-2",
             },
+            timeout=CHAT_TIMEOUT,
         )
         assert response.status_code == 200
         data = response.json()
@@ -401,6 +446,7 @@ class TestChatFileOperations:
                 "message": "Edit TEST_agent_created.txt and append this text: Goodbye from AI agent",
                 "session_id": "test-file-session-3",
             },
+            timeout=CHAT_TIMEOUT,
         )
         assert response.status_code == 200
         data = response.json()
@@ -418,7 +464,8 @@ class TestChatFileOperations:
         # Verify file was actually updated
         time.sleep(0.5)
         file_response = requests.get(
-            f"{BASE_URL}/api/files/{TestChatFileOperations.created_file_id}"
+            f"{BASE_URL}/api/files/{TestChatFileOperations.created_file_id}",
+            timeout=REQUEST_TIMEOUT,
         )
         file_data = file_response.json()
         assert "Hello from AI agent" in file_data["content"]
@@ -433,6 +480,7 @@ class TestChatFileOperations:
                 "message": "List all files in storage",
                 "session_id": "test-file-session-4",
             },
+            timeout=CHAT_TIMEOUT,
         )
         assert response.status_code == 200
         data = response.json()
@@ -459,7 +507,8 @@ class TestChatFileOperations:
         """Cleanup: Delete files created during chat tests"""
         if hasattr(TestChatFileOperations, "created_file_id"):
             response = requests.delete(
-                f"{BASE_URL}/api/files/{TestChatFileOperations.created_file_id}"
+                f"{BASE_URL}/api/files/{TestChatFileOperations.created_file_id}",
+                timeout=REQUEST_TIMEOUT,
             )
             if response.status_code == 200:
                 print(f"✓ Cleaned up chat test file")

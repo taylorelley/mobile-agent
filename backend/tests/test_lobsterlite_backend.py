@@ -1,5 +1,6 @@
 import os
 import time
+from pathlib import Path
 
 import pytest
 import requests
@@ -7,11 +8,17 @@ import requests
 # Backend API Tests for LobsterLite
 # Tests: health, soul, tools, keywords, models, settings, memory/facts, conversations, chat
 
+# Default timeout (seconds) for all HTTP requests to prevent hangs
+REQUEST_TIMEOUT = 30
+# Chat requests may take longer due to LLM inference
+CHAT_TIMEOUT = 60
+
 # Resolve backend URL from environment or frontend .env file
 BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "").rstrip("/")
 if not BASE_URL:
+    _env_path = Path(__file__).resolve().parents[1] / ".." / "frontend" / ".env"
     try:
-        with open("/app/frontend/.env", "r") as f:
+        with open(_env_path, "r") as f:
             for line in f:
                 if line.startswith("EXPO_PUBLIC_BACKEND_URL="):
                     BASE_URL = line.split("=", 1)[1].strip().rstrip("/")
@@ -30,7 +37,7 @@ class TestHealth:
 
     def test_health_endpoint_returns_ok(self):
         """Test /api/health returns ok status"""
-        response = requests.get(f"{BASE_URL}/api/health")
+        response = requests.get(f"{BASE_URL}/api/health", timeout=REQUEST_TIMEOUT)
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
@@ -43,7 +50,7 @@ class TestSoul:
 
     def test_get_soul_returns_document(self):
         """Test /api/soul GET returns SOUL document"""
-        response = requests.get(f"{BASE_URL}/api/soul")
+        response = requests.get(f"{BASE_URL}/api/soul", timeout=REQUEST_TIMEOUT)
         assert response.status_code == 200
         data = response.json()
         assert "content" in data
@@ -55,7 +62,11 @@ class TestSoul:
     def test_put_soul_updates_content_and_returns_token_count(self):
         """Test /api/soul PUT updates SOUL content and returns token count"""
         new_content = "# Identity\n- Name: TestBot\n- Role: Test Agent\n\n# Personality\n- Tone: Testing mode"
-        response = requests.put(f"{BASE_URL}/api/soul", json={"content": new_content})
+        response = requests.put(
+            f"{BASE_URL}/api/soul",
+            json={"content": new_content},
+            timeout=REQUEST_TIMEOUT,
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["content"] == new_content
@@ -65,7 +76,7 @@ class TestSoul:
         print(f"✓ PUT /api/soul passed, estimated tokens: {data['estimated_tokens']}")
 
         # Verify persistence with GET
-        get_response = requests.get(f"{BASE_URL}/api/soul")
+        get_response = requests.get(f"{BASE_URL}/api/soul", timeout=REQUEST_TIMEOUT)
         assert get_response.status_code == 200
         get_data = get_response.json()
         assert get_data["content"] == new_content
@@ -77,7 +88,7 @@ class TestTools:
 
     def test_get_tools_returns_15_builtin_tools(self):
         """Test /api/tools GET returns 15 built-in tools (10 original + 5 file tools)"""
-        response = requests.get(f"{BASE_URL}/api/tools")
+        response = requests.get(f"{BASE_URL}/api/tools", timeout=REQUEST_TIMEOUT)
         assert response.status_code == 200
         tools = response.json()
         assert isinstance(tools, list)
@@ -113,7 +124,7 @@ class TestKeywords:
 
     def test_get_keywords_returns_keywords_list(self):
         """Test /api/keywords GET returns keywords list"""
-        response = requests.get(f"{BASE_URL}/api/keywords")
+        response = requests.get(f"{BASE_URL}/api/keywords", timeout=REQUEST_TIMEOUT)
         assert response.status_code == 200
         data = response.json()
         assert "keywords" in data
@@ -127,7 +138,9 @@ class TestKeywords:
         """Test /api/keywords PUT updates keywords"""
         new_keywords = ["test keyword 1", "test keyword 2", "open app"]
         response = requests.put(
-            f"{BASE_URL}/api/keywords", json={"keywords": new_keywords}
+            f"{BASE_URL}/api/keywords",
+            json={"keywords": new_keywords},
+            timeout=REQUEST_TIMEOUT,
         )
         assert response.status_code == 200
         data = response.json()
@@ -135,7 +148,9 @@ class TestKeywords:
         print(f"✓ PUT /api/keywords passed")
 
         # Verify persistence with GET
-        get_response = requests.get(f"{BASE_URL}/api/keywords")
+        get_response = requests.get(
+            f"{BASE_URL}/api/keywords", timeout=REQUEST_TIMEOUT
+        )
         assert get_response.status_code == 200
         get_data = get_response.json()
         assert get_data["keywords"] == new_keywords
@@ -147,7 +162,7 @@ class TestModels:
 
     def test_get_models_returns_2_default_models(self):
         """Test /api/models GET returns 2 default models (chat + action)"""
-        response = requests.get(f"{BASE_URL}/api/models")
+        response = requests.get(f"{BASE_URL}/api/models", timeout=REQUEST_TIMEOUT)
         assert response.status_code == 200
         models = response.json()
         assert isinstance(models, list)
@@ -172,7 +187,9 @@ class TestModels:
     def test_post_models_download_starts_model_download_simulation(self):
         """Test /api/models/download POST starts model download simulation"""
         # First, get a model that's not downloaded
-        models_response = requests.get(f"{BASE_URL}/api/models")
+        models_response = requests.get(
+            f"{BASE_URL}/api/models", timeout=REQUEST_TIMEOUT
+        )
         models = models_response.json()
         test_model = None
         for m in models:
@@ -188,7 +205,9 @@ class TestModels:
 
         # Start download
         response = requests.post(
-            f"{BASE_URL}/api/models/download", json={"model_id": model_id}
+            f"{BASE_URL}/api/models/download",
+            json={"model_id": model_id},
+            timeout=REQUEST_TIMEOUT,
         )
         assert response.status_code == 200
         data = response.json()
@@ -199,7 +218,9 @@ class TestModels:
         if data["status"] == "downloading":
             # Wait a bit and check status
             time.sleep(1.5)
-            status_response = requests.get(f"{BASE_URL}/api/models/{model_id}/status")
+            status_response = requests.get(
+                f"{BASE_URL}/api/models/{model_id}/status", timeout=REQUEST_TIMEOUT
+            )
             assert status_response.status_code == 200
             status_data = status_response.json()
             assert "progress" in status_data
@@ -212,7 +233,7 @@ class TestSettings:
 
     def test_get_settings_returns_default_settings(self):
         """Test /api/settings GET returns default settings"""
-        response = requests.get(f"{BASE_URL}/api/settings")
+        response = requests.get(f"{BASE_URL}/api/settings", timeout=REQUEST_TIMEOUT)
         assert response.status_code == 200
         data = response.json()
         assert "theme" in data
@@ -227,6 +248,7 @@ class TestSettings:
         response = requests.put(
             f"{BASE_URL}/api/settings",
             json={"theme": "dark", "onboarding_completed": True},
+            timeout=REQUEST_TIMEOUT,
         )
         assert response.status_code == 200
         data = response.json()
@@ -235,7 +257,9 @@ class TestSettings:
         print(f"✓ PUT /api/settings passed")
 
         # Verify persistence with GET
-        get_response = requests.get(f"{BASE_URL}/api/settings")
+        get_response = requests.get(
+            f"{BASE_URL}/api/settings", timeout=REQUEST_TIMEOUT
+        )
         assert get_response.status_code == 200
         get_data = get_response.json()
         assert get_data["theme"] == "dark"
@@ -248,7 +272,9 @@ class TestMemory:
 
     def test_get_memory_facts_returns_list(self):
         """Test /api/memory/facts GET returns list (empty initially or with data)"""
-        response = requests.get(f"{BASE_URL}/api/memory/facts")
+        response = requests.get(
+            f"{BASE_URL}/api/memory/facts", timeout=REQUEST_TIMEOUT
+        )
         assert response.status_code == 200
         facts = response.json()
         assert isinstance(facts, list)
@@ -260,7 +286,9 @@ class TestConversations:
 
     def test_get_conversations_returns_list(self):
         """Test /api/conversations GET returns list (empty initially or with data)"""
-        response = requests.get(f"{BASE_URL}/api/conversations")
+        response = requests.get(
+            f"{BASE_URL}/api/conversations", timeout=REQUEST_TIMEOUT
+        )
         assert response.status_code == 200
         convos = response.json()
         assert isinstance(convos, list)
@@ -278,6 +306,7 @@ class TestChat:
                 "message": "What is the weather like?",
                 "session_id": "test-session-1",
             },
+            timeout=CHAT_TIMEOUT,
         )
         assert response.status_code == 200
         data = response.json()
@@ -297,6 +326,7 @@ class TestChat:
                 "message": "Set an alarm for 7am tomorrow",
                 "session_id": "test-session-2",
             },
+            timeout=CHAT_TIMEOUT,
         )
         assert response.status_code == 200
         data = response.json()

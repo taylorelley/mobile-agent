@@ -4,6 +4,8 @@ import logging
 import os
 import re
 import uuid
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -21,7 +23,14 @@ mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ["DB_NAME"]]
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    yield
+    client.close()
+
+
+app = FastAPI(lifespan=lifespan)
 api_router = APIRouter(prefix="/api")
 
 logger = logging.getLogger(__name__)
@@ -520,17 +529,6 @@ class FileSearch(BaseModel):
     directory: Optional[str] = None
 
 
-class ConversationResponse(BaseModel):
-    id: str
-    session_id: str
-    user_input: str
-    chat_output: str
-    action_output: Optional[str] = None
-    tool_calls: Optional[str] = None
-    routing_decision: str
-    timestamp: str
-
-
 # ─── Helper Functions ───
 
 
@@ -855,7 +853,7 @@ async def execute_file_operation(tool_name, params):
             query["directory"] = {"$regex": f"^{re.escape(directory)}", "$options": "i"}
         pattern = params.get("pattern", "")
         if pattern:
-            regex_pattern = pattern.replace("*", ".*").replace("?", ".")
+            regex_pattern = re.escape(pattern).replace(r"\*", ".*").replace(r"\?", ".")
             query["filename"] = {"$regex": regex_pattern, "$options": "i"}
         files = await db.files.find(query, {"_id": 0}).to_list(100)
         if not files:
@@ -1585,15 +1583,11 @@ async def health():
 
 app.include_router(api_router)
 
+_cors_origins = os.environ.get("CORS_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
