@@ -59,7 +59,7 @@ export default function KeywordsScreen() {
       <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <MaterialCommunityIcons name="information-outline" size={16} color={colors.secondary} />
         <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-          These keywords trigger the Intent Router's heuristic fallback when the Chat Model doesn't emit an [ACTION:] signal.
+          These keywords trigger the Intent Router&apos;s heuristic fallback when the Chat Model doesn&apos;t emit an [ACTION:] signal.
         </Text>
       </View>
 

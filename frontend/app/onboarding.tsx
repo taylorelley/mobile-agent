@@ -59,7 +59,7 @@ export default function OnboardingScreen() {
       </View>
       <Text style={[styles.title, { color: colors.textPrimary }]}>Personalize</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Configure your agent's identity
+        Configure your agent&apos;s identity
       </Text>
       <View style={styles.formGroup}>
         <Text style={[styles.label, { color: colors.textSecondary }]}>Agent Name</Text>

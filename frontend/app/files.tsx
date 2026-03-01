@@ -387,7 +387,7 @@ export default function FilesScreen() {
             <Text style={[s.emptyTitle, { color: colors.textPrimary }]}>No files yet</Text>
             <Text style={[s.emptySubtitle, { color: colors.textSecondary }]}>
               Ask your agent to create files, or tap + to create one manually.{'\n\n'}
-              Try: "Create a file called shopping-list.txt with milk, eggs, and bread"
+              Try: {'"'}Create a file called shopping-list.txt with milk, eggs, and bread{'"'}
             </Text>
           </View>
         )}
@@ -400,7 +400,7 @@ export default function FilesScreen() {
                 <MaterialCommunityIcons name="file-search-outline" size={48} color={colors.textSecondary + '40'} />
                 <Text style={[s.emptyTitle, { color: colors.textPrimary }]}>No results</Text>
                 <Text style={[s.emptySubtitle, { color: colors.textSecondary }]}>
-                  No files matching "{searchQuery}"
+                  No files matching {'"'}{searchQuery}{'"'}
                 </Text>
               </View>
             )}
