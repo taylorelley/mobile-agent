@@ -54,7 +54,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install Python dependencies
-        run: pip install -r backend/requirements.txt
+        run: pip install $(grep -v '^emergentintegrations' backend/requirements.txt)
 
       - name: mypy
         run: mypy backend/server.py --ignore-missing-imports
