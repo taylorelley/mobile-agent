@@ -29,6 +29,8 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
+_background_tasks: set[asyncio.Task] = set()  # prevent GC of fire-and-forget tasks
+
 # ─── Default Data ───
 
 DEFAULT_SOUL = """# Identity
@@ -959,8 +961,27 @@ async def send_chat(msg: ChatMessage):
                     "success": False,
                     "error": "Could not parse function call",
                 }
-        except (json.JSONDecodeError, Exception) as e:
-            tool_result = {"tool": "unknown", "success": False, "error": str(e)}
+        except json.JSONDecodeError as e:
+            tool_result = {
+                "tool": "unknown",
+                "success": False,
+                "error": f"JSONDecodeError: {e}",
+            }
+            tool_calls_str = json.dumps({"raw": action_response, "error": str(e)})
+        except (ValueError, KeyError, TypeError) as e:
+            tool_result = {
+                "tool": "unknown",
+                "success": False,
+                "error": f"{type(e).__name__}: {e}",
+            }
+            tool_calls_str = json.dumps({"raw": action_response, "error": str(e)})
+        except Exception as e:
+            logger.exception("Unexpected error processing action response")
+            tool_result = {
+                "tool": "unknown",
+                "success": False,
+                "error": f"{type(e).__name__}: {e}",
+            }
             tool_calls_str = json.dumps({"raw": action_response, "error": str(e)})
 
         # Step 5: Chat Model confirmation
@@ -1444,7 +1465,11 @@ async def start_model_download(req: ModelDownloadRequest):
     await db.models.update_one(
         {"id": req.model_id}, {"$set": {"status": "downloading", "progress": 0}}
     )
-    asyncio.create_task(simulate_download(req.model_id, model.get("size_mb", 300)))
+    task = asyncio.create_task(
+        simulate_download(req.model_id, model.get("size_mb", 300))
+    )
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
     return {"status": "downloading", "model_id": req.model_id}
 
 
@@ -1482,7 +1507,7 @@ async def get_settings_endpoint():
 
 @api_router.put("/settings")
 async def update_settings(update: SettingsUpdate):
-    update_dict = {k: v for k, v in update.dict().items() if v is not None}
+    update_dict = {k: v for k, v in update.model_dump().items() if v is not None}
     if update_dict:
         await db.settings.update_one({}, {"$set": update_dict}, upsert=True)
     return await get_settings()
