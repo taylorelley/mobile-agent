@@ -6,15 +6,22 @@ import requests
 # Backend API Tests for File Manager Enhancements
 # Tests: File rename, file search (by name and content), directory tree view
 
-# Read from frontend .env file
-try:
-    with open("/app/frontend/.env", "r") as f:
-        for line in f:
-            if line.startswith("EXPO_PUBLIC_BACKEND_URL="):
-                BASE_URL = line.split("=")[1].strip().rstrip("/")
-                break
-except:
-    BASE_URL = "https://offline-assistant-26.preview.emergentagent.com"
+# Resolve backend URL from environment or frontend .env file
+BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "").rstrip("/")
+if not BASE_URL:
+    try:
+        with open("/app/frontend/.env", "r") as f:
+            for line in f:
+                if line.startswith("EXPO_PUBLIC_BACKEND_URL="):
+                    BASE_URL = line.split("=", 1)[1].strip().rstrip("/")
+                    break
+    except FileNotFoundError:
+        pass
+if not BASE_URL:
+    raise RuntimeError(
+        "EXPO_PUBLIC_BACKEND_URL not found. Set it in the environment "
+        "or in frontend/.env"
+    )
 
 
 class TestFileRename:
@@ -460,6 +467,8 @@ class TestDirectoryTree:
             for d in tree
         )
 
+        assert has_documents, f"Expected 'documents' directory in tree: {tree}"
+        assert has_projects, f"Expected 'projects' directory in tree: {tree}"
         print(f"✓ Tree includes documents: {has_documents}, projects: {has_projects}")
 
     def test_05_tree_has_correct_file_counts(self):

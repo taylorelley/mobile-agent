@@ -20,7 +20,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install Python linters
-        run: pip install flake8 black isort
+        run: pip install $(grep -E '^(black|flake8|isort)==' backend/requirements.txt)
 
       - name: Flake8
         run: flake8 backend/ --exclude backend/tests --max-line-length 120 --extend-ignore E501

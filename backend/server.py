@@ -31,6 +31,31 @@ logging.basicConfig(
 
 _background_tasks: set[asyncio.Task] = set()  # prevent GC of fire-and-forget tasks
 
+
+def _on_download_done(model_id: str):
+    def callback(task: asyncio.Task):
+        _background_tasks.discard(task)
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc:
+            logger.error("simulate_download failed for model %s: %s", model_id, exc)
+            asyncio.ensure_future(
+                db.models.update_one(
+                    {"id": model_id},
+                    {
+                        "$set": {
+                            "status": "error",
+                            "progress": 0,
+                            "download_speed": None,
+                        }
+                    },
+                )
+            )
+
+    return callback
+
+
 # ─── Default Data ───
 
 DEFAULT_SOUL = """# Identity
@@ -510,36 +535,43 @@ class ConversationResponse(BaseModel):
 
 
 async def get_soul():
-    soul = await db.soul_config.find_one({}, {"_id": 0})
-    if not soul:
-        soul = {
-            "content": DEFAULT_SOUL,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        }
-        await db.soul_config.insert_one(soul.copy())
-    return soul
+    await db.soul_config.update_one(
+        {},
+        {
+            "$setOnInsert": {
+                "content": DEFAULT_SOUL,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        },
+        upsert=True,
+    )
+    return await db.soul_config.find_one({}, {"_id": 0})
 
 
 async def get_settings():
-    settings = await db.settings.find_one({}, {"_id": 0})
-    if not settings:
-        settings = {
-            "theme": "system",
-            "onboarding_completed": False,
-            "agent_name": "LobsterLite",
-            "chat_model": "qwen3-0.6b",
-            "action_model": "functiongemma-270m",
-        }
-        await db.settings.insert_one(settings.copy())
-    return settings
+    await db.settings.update_one(
+        {},
+        {
+            "$setOnInsert": {
+                "theme": "system",
+                "onboarding_completed": False,
+                "agent_name": "LobsterLite",
+                "chat_model": "qwen3-0.6b",
+                "action_model": "functiongemma-270m",
+            }
+        },
+        upsert=True,
+    )
+    return await db.settings.find_one({}, {"_id": 0})
 
 
 async def get_action_keywords():
-    kw = await db.action_keywords.find_one({}, {"_id": 0})
-    if not kw:
-        kw = {"keywords": DEFAULT_ACTION_KEYWORDS}
-        await db.action_keywords.insert_one(kw.copy())
-    return kw
+    await db.action_keywords.update_one(
+        {},
+        {"$setOnInsert": {"keywords": DEFAULT_ACTION_KEYWORDS}},
+        upsert=True,
+    )
+    return await db.action_keywords.find_one({}, {"_id": 0})
 
 
 async def get_tools():
@@ -627,6 +659,11 @@ ACTION_SIGNAL_REGEX = re.compile(r"\[ACTION:\s*(.+?)\]")
 def build_chat_prompt(
     soul_content, memory_snippets, conversation_history, user_input, tools
 ):
+    # Truncate SOUL content to ~512 tokens (same heuristic as update_soul)
+    max_soul_chars = 512 * 4
+    if len(soul_content) > max_soul_chars:
+        soul_content = soul_content[:max_soul_chars] + "\n(SOUL content truncated)"
+
     tool_summary = "\n".join([f"- {t['name']}: {t['description']}" for t in tools])
     memory_text = ""
     if memory_snippets:
@@ -1068,7 +1105,12 @@ async def send_chat(msg: ChatMessage):
                             )
                             final_response = confirmation
                 except Exception:
-                    pass
+                    logger.exception(
+                        "Error processing heuristic action: action_response=%s, message=%s",
+                        action_response,
+                        msg.message,
+                    )
+                    final_response = "An error occurred executing the requested action."
             else:
                 final_response = clarify_response.replace("[NO_ACTION]", "").strip()
 
@@ -1469,7 +1511,7 @@ async def start_model_download(req: ModelDownloadRequest):
         simulate_download(req.model_id, model.get("size_mb", 300))
     )
     _background_tasks.add(task)
-    task.add_done_callback(_background_tasks.discard)
+    task.add_done_callback(_on_download_done(req.model_id))
     return {"status": "downloading", "model_id": req.model_id}
 
 

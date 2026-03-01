@@ -7,15 +7,22 @@ import requests
 # Backend API Tests for File Management Features
 # Tests: File CRUD operations, file tools in chat integration
 
-# Read from frontend .env file
-try:
-    with open("/app/frontend/.env", "r") as f:
-        for line in f:
-            if line.startswith("EXPO_PUBLIC_BACKEND_URL="):
-                BASE_URL = line.split("=")[1].strip().rstrip("/")
-                break
-except:
-    BASE_URL = "https://offline-assistant-26.preview.emergentagent.com"
+# Resolve backend URL from environment or frontend .env file
+BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "").rstrip("/")
+if not BASE_URL:
+    try:
+        with open("/app/frontend/.env", "r") as f:
+            for line in f:
+                if line.startswith("EXPO_PUBLIC_BACKEND_URL="):
+                    BASE_URL = line.split("=", 1)[1].strip().rstrip("/")
+                    break
+    except FileNotFoundError:
+        pass
+if not BASE_URL:
+    raise RuntimeError(
+        "EXPO_PUBLIC_BACKEND_URL not found. Set it in the environment "
+        "or in frontend/.env"
+    )
 
 
 class TestFileAPIs:
@@ -444,6 +451,11 @@ class TestChatFileOperations:
                 assert tool_call.get("tool") == "list_files"
                 assert tool_result.get("success") == True
                 print(f"✓ list_files tool executed successfully")
+        else:
+            assert "response" in data and len(data["response"]) > 0, (
+                f"Expected non-empty response for non-action route: {data}"
+            )
+            print(f"✓ Non-action route returned response")
 
     def test_99_cleanup_chat_test_files(self):
         """Cleanup: Delete files created during chat tests"""
