@@ -439,8 +439,6 @@ class TestChatFileOperations:
 
         # Should mention files or show file list
         response_lower = data["response"].lower()
-        # Response should reference files somehow
-        print(f"✓ Chat listed files via natural language")
 
         # Check if action was routed
         if "action_routed" in data.get("routing_decision", ""):
@@ -452,7 +450,7 @@ class TestChatFileOperations:
                 assert tool_result.get("success") == True
                 print(f"✓ list_files tool executed successfully")
         else:
-            assert "response" in data and len(data["response"]) > 0, (
+            assert len(response_lower) > 0, (
                 f"Expected non-empty response for non-action route: {data}"
             )
             print(f"✓ Non-action route returned response")

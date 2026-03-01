@@ -33,6 +33,15 @@ _background_tasks: set[asyncio.Task] = set()  # prevent GC of fire-and-forget ta
 
 
 def _on_download_done(model_id: str):
+    async def _mark_error():
+        try:
+            await db.models.update_one(
+                {"id": model_id},
+                {"$set": {"status": "error", "progress": 0, "download_speed": None}},
+            )
+        except Exception:
+            logger.exception("Failed to mark model %s as error", model_id)
+
     def callback(task: asyncio.Task):
         _background_tasks.discard(task)
         if task.cancelled():
@@ -40,18 +49,9 @@ def _on_download_done(model_id: str):
         exc = task.exception()
         if exc:
             logger.error("simulate_download failed for model %s: %s", model_id, exc)
-            asyncio.ensure_future(
-                db.models.update_one(
-                    {"id": model_id},
-                    {
-                        "$set": {
-                            "status": "error",
-                            "progress": 0,
-                            "download_speed": None,
-                        }
-                    },
-                )
-            )
+            err_task = asyncio.create_task(_mark_error())
+            _background_tasks.add(err_task)
+            err_task.add_done_callback(_background_tasks.discard)
 
     return callback
 
