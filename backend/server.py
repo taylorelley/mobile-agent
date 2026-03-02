@@ -1317,9 +1317,9 @@ async def list_files_endpoint(
 
 @api_router.get("/files/{file_id}")
 async def get_file_endpoint(file_id: str):
-    file_doc = await db.files.find_one({"id": file_id}, {"_id": 0})
+    file_doc = await db.files.find_one({"id": file_id}, {"_id": 0})  # type: ignore[func-returns-value]
     if not file_doc:
-        file_doc = await db.files.find_one({"path": file_id}, {"_id": 0})
+        file_doc = await db.files.find_one({"path": file_id}, {"_id": 0})  # type: ignore[func-returns-value]
     if not file_doc:
         raise HTTPException(status_code=404, detail="File not found")
     return file_doc
@@ -1331,7 +1331,7 @@ async def create_file_endpoint(file: FileCreate):
     file_path = (
         f"{directory}/{file.filename}".strip("/") if directory else file.filename
     )
-    existing = await db.files.find_one({"path": file_path}, {"_id": 0})
+    existing = await db.files.find_one({"path": file_path}, {"_id": 0})  # type: ignore[func-returns-value]
     if existing:
         raise HTTPException(
             status_code=409, detail=f"File '{file_path}' already exists"
@@ -1353,9 +1353,9 @@ async def create_file_endpoint(file: FileCreate):
 
 @api_router.put("/files/{file_id}")
 async def update_file_endpoint(file_id: str, update: FileUpdate):
-    file_doc = await db.files.find_one({"id": file_id}, {"_id": 0})
+    file_doc = await db.files.find_one({"id": file_id}, {"_id": 0})  # type: ignore[func-returns-value]
     if not file_doc:
-        file_doc = await db.files.find_one({"path": file_id}, {"_id": 0})
+        file_doc = await db.files.find_one({"path": file_id}, {"_id": 0})  # type: ignore[func-returns-value]
     if not file_doc:
         raise HTTPException(status_code=404, detail="File not found")
     now_str = datetime.now(timezone.utc).isoformat()
@@ -1390,9 +1390,9 @@ async def delete_file_endpoint(file_id: str):
 
 @api_router.patch("/files/{file_id}/rename")
 async def rename_file_endpoint(file_id: str, rename: FileRename):
-    file_doc = await db.files.find_one({"id": file_id}, {"_id": 0})
+    file_doc = await db.files.find_one({"id": file_id}, {"_id": 0})  # type: ignore[func-returns-value]
     if not file_doc:
-        file_doc = await db.files.find_one({"path": file_id}, {"_id": 0})
+        file_doc = await db.files.find_one({"path": file_id}, {"_id": 0})  # type: ignore[func-returns-value]
     if not file_doc:
         raise HTTPException(status_code=404, detail="File not found")
     new_filename = rename.new_filename.strip()
@@ -1496,7 +1496,7 @@ async def list_models():
 
 @api_router.post("/models/download")
 async def start_model_download(req: ModelDownloadRequest):
-    model = await db.models.find_one({"id": req.model_id}, {"_id": 0})
+    model = await db.models.find_one({"id": req.model_id}, {"_id": 0})  # type: ignore[func-returns-value]
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
     if model.get("status") == "downloaded":
@@ -1530,7 +1530,7 @@ async def simulate_download(model_id: str, size_mb: int):
 
 @api_router.get("/models/{model_id}/status")
 async def get_model_status(model_id: str):
-    model = await db.models.find_one({"id": model_id}, {"_id": 0})
+    model = await db.models.find_one({"id": model_id}, {"_id": 0})  # type: ignore[func-returns-value]
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
     return model
