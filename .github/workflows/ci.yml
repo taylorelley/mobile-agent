@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-format:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+
+      - name: Install Python linters
+        run: pip install $(grep -E '^(black|flake8|isort)==' backend/requirements.txt)
+
+      - name: Flake8
+        run: flake8 backend/ --exclude backend/tests --max-line-length 120 --extend-ignore E501
+
+      - name: Black
+        run: black --check backend/ --exclude backend/tests
+
+      - name: isort
+        run: isort --check backend/ --profile black --skip-glob "backend/tests/*"
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+
+      - name: Install frontend dependencies
+        run: cd frontend && yarn install --frozen-lockfile
+
+      - name: ESLint
+        run: cd frontend && yarn lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: pip install $(grep -v '^emergentintegrations' backend/requirements.txt)
+
+      - name: mypy
+        run: mypy backend/server.py --ignore-missing-imports
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+
+      - name: Install frontend dependencies
+        run: cd frontend && yarn install --frozen-lockfile
+
+      - name: TypeScript
+        run: cd frontend && npx tsc --noEmit
+
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [lint-and-format, typecheck]
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+
+      - name: Set up JDK
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f43607fa02 # v3.2.2
+
+      - name: Install frontend dependencies
+        run: cd frontend && yarn install --frozen-lockfile
+
+      - name: Expo prebuild
+        run: cd frontend && npx expo prebuild --platform android --no-install
+
+      - name: Build APK
+        run: cd frontend/android && ./gradlew assembleRelease
+
+      - name: Upload APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: app-release.apk
+          path: frontend/android/app/build/outputs/apk/release/app-release.apk
+
+  release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-android]
+    permissions:
+      contents: write
+    steps:
+      - name: Download APK
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: app-release.apk
+          path: ./artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
+        with:
+          files: ./artifacts/app-release.apk
+          generate_release_notes: true

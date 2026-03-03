@@ -46,7 +46,7 @@ export const Colors = {
 };
 
 export type ThemeMode = 'light' | 'dark' | 'system';
-export type ColorScheme = typeof Colors.light;
+export type ColorScheme = typeof Colors.light | typeof Colors.dark;
 
 export function resolveTheme(mode: ThemeMode, systemScheme: 'light' | 'dark' | null | undefined): 'light' | 'dark' {
   if (mode === 'system') {
